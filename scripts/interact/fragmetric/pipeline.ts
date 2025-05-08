@@ -27,6 +27,7 @@ async function pipeline({
     tx: restakeTx,
     lutLs: restakeLutLs,
     signers: restakeSigners,
+    mintedTokenAmount: restakeMintedTokenAmount,
   } = await restake({
     user,
     conn,
@@ -41,7 +42,7 @@ async function pipeline({
   } = await wrap({
     user,
     conn,
-    assetAmount: BigInt(0.000001 * LAMPORTS_PER_SOL),
+    assetAmount: restakeMintedTokenAmount,
   });
 
   const {
@@ -52,7 +53,7 @@ async function pipeline({
     conn,
     sender: user,
     recipient: user,
-    bridgeAmount: BigInt(0.000001 * LAMPORTS_PER_SOL),
+    bridgeAmount: restakeMintedTokenAmount,
     destination: "soon",
   });
 
@@ -92,7 +93,7 @@ async function main() {
   const al = new AccountLoader();
   const user = al.getKeypairFromEnvironmentDecrypt("ADMIN");
   const assetMint = null;
-  const assetAmount = BigInt(0.001 * LAMPORTS_PER_SOL);
+  const assetAmount = BigInt(0.0001 * LAMPORTS_PER_SOL);
   const { tx } = await pipeline({ user: user.publicKey, conn, assetMint, assetAmount });
 
   tx.sign([user]);

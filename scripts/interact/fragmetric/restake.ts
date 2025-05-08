@@ -10,6 +10,11 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 import { convertIinstructionToInstruction, getLookupTableAddress } from "./utils";
+import {
+  getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 
 export async function restake({
   user,
@@ -23,6 +28,7 @@ export async function restake({
   assetAmount: bigint;
 }) {
   const restaking = RestakingProgram.mainnet();
+  const fragSolMint = new PublicKey("FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo");
 
   // user constructor accepts: null | string | Address | TransactionSigner | () => Promise<null | string | Address | TransactionSigner>
   // so we can resolve user address in lazy way.
@@ -58,8 +64,40 @@ export async function restake({
   // create a v0 transaction from the v0 message
   const transactionV0 = new VersionedTransaction(messageV0);
 
+  let mintedTokenAmount = BigInt(0);
+
+  {
+    // simulate the transaction to get minted fragSol amount
+    const simulation = await conn.simulateTransaction(transactionV0, {
+      sigVerify: false,
+      innerInstructions: true,
+    });
+
+    if (simulation.value.innerInstructions?.length != 1) {
+      throw new Error("innerInstructions length is not 1");
+    }
+    if (simulation.value.innerInstructions[0].index != 4) {
+      throw new Error("innerInstructions index is not 4");
+    }
+
+    const mintIns = simulation.value.innerInstructions[0].instructions[0];
+
+    if (
+      !mintIns.programId.equals(TOKEN_2022_PROGRAM_ID) ||
+      (mintIns as any).parsed.type !== "mintTo" ||
+      !new PublicKey((mintIns as any).parsed.info.mint).equals(fragSolMint) ||
+      !new PublicKey((mintIns as any).parsed.info.account).equals(
+        getAssociatedTokenAddressSync(fragSolMint, user, false, TOKEN_2022_PROGRAM_ID)
+      )
+    ) {
+      throw new Error("mintIns is not a mintTo instruction");
+    }
+
+    mintedTokenAmount = BigInt((mintIns as any).parsed.info.amount);
+  }
+
   // await sendTxn(conn.sendTransaction(transactionV0, { skipPreflight: false }), "restake");
-  return { tx, lutLs: lookupTableAddress, signers: [] };
+  return { tx, lutLs: lookupTableAddress, signers: [], mintedTokenAmount };
 }
 
 async function main() {
@@ -68,11 +106,18 @@ async function main() {
 
   const user = al.getKeypairFromEnvironmentDecrypt("ADMIN");
   const assetMint = null; // null means SOL
-  const assetAmount = BigInt(0.001 * LAMPORTS_PER_SOL);
+  const assetAmount = BigInt(0.0001 * LAMPORTS_PER_SOL);
 
-  const { tx } = await restake({ user: user.publicKey, conn, assetMint, assetAmount });
+  const { tx, mintedTokenAmount } = await restake({
+    user: user.publicKey,
+    conn,
+    assetMint,
+    assetAmount,
+  });
 
-  await sendTxn(conn.sendTransaction(tx, [user]), "restake");
+  console.log({ mintedTokenAmount });
+
+  // await sendTxn(conn.sendTransaction(tx, [user]), "restake");
 }
 
 if (require.main === module) {
