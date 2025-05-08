@@ -49,12 +49,12 @@ export async function bridgeWfragSolFromSoonToSolana({
     warpRouteConfig.tokens.map((token: any) => new Token(token))
   );
 
-  const solanaWfragSol = warpCore.tokens.filter(
+  const soonWfragSol = warpCore.tokens.filter(
     (token) => token.chainName === "soon" && token.symbol === "wfragSOL"
   )[0];
 
   const txs = await warpCore.getTransferRemoteTxs({
-    originTokenAmount: solanaWfragSol.amount(bridgeAmount),
+    originTokenAmount: soonWfragSol.amount(bridgeAmount),
     destination,
     sender: sender.toBase58(),
     recipient: recipient.toBase58(),
@@ -66,7 +66,7 @@ export async function bridgeWfragSolFromSoonToSolana({
   const randomWallet = Keypair.generate();
 
   {
-    const hypAdapter = solanaWfragSol.getHypAdapter(
+    const hypAdapter = soonWfragSol.getHypAdapter(
       warpCore.multiProvider,
       destination
     ) as SealevelHypTokenAdapter;
