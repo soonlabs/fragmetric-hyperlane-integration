@@ -18,12 +18,12 @@ async function main() {
   const senderKeyPair = accountLoader.getKeypairFromEnvironmentDecrypt("ADMIN");
   await logAccountInfo(senderKeyPair.publicKey.toBase58(), "sender");
 
-  const to = new PublicKey("13iFD5HFatKjA88AG5qwZtGUtyLhKeza8EcdaASStxsQ");
+  const to = new PublicKey("GP7Mx1vTFT19jGLLRwARCwtV3HHDyANJEFhym4ByYvCY");
   await logAccountInfo(to.toBase58(), "to");
 
   const transaction = new Transaction();
 
-  const LAMPORTS_TO_SEND = 0.119 * LAMPORTS_PER_SOL;
+  const LAMPORTS_TO_SEND = 0.05 * LAMPORTS_PER_SOL;
 
   const sendSolInstruction = SystemProgram.transfer({
     fromPubkey: senderKeyPair.publicKey,

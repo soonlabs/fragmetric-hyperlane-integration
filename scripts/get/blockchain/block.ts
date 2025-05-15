@@ -3,9 +3,11 @@ import { getConnection } from "../../utils/utils";
 async function getBlock() {
   const conn = getConnection();
 
-  let height = 480200;
-
-  console.log(await conn.getBlockHeight())
+  console.log(
+    await conn.getBlock(339923608, {
+      maxSupportedTransactionVersion: 0,
+    })
+  );
 }
 
 async function main() {

@@ -1,5 +1,6 @@
 import {
   Cluster,
+  createSignerFromKeypair,
   generateSigner,
   KeypairSigner,
   percentAmount,
@@ -13,6 +14,7 @@ import { createMint, initializeMint } from "@metaplex-foundation/mpl-toolbox";
 import {
   createTransferInstruction,
   getAssociatedTokenAddressSync,
+  getOrCreateAssociatedTokenAccount,
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import { PublicKey, Transaction } from "@solana/web3.js";
@@ -37,7 +39,7 @@ import {
 async function transferToken(params: {
   tokenMint: PublicKey;
   from: KeypairSigner;
-  to: KeypairSigner;
+  to: PublicKey;
   amount: bigint;
 }) {
   // const user = al.getMetaplexKeypairSignerFromEnv(umi, "USER_1");
@@ -47,7 +49,7 @@ async function transferToken(params: {
   tx.add(
     createTransferInstruction(
       getAssociatedTokenAddressSync(params.tokenMint, toWeb3JsPublicKey(params.from.publicKey)),
-      getAssociatedTokenAddressSync(params.tokenMint, toWeb3JsPublicKey(params.to.publicKey)),
+      getAssociatedTokenAddressSync(params.tokenMint, params.to),
       toWeb3JsPublicKey(params.from.publicKey),
       params.amount
     )
@@ -64,16 +66,17 @@ async function main() {
   const umi = createUmi(getConnection().rpcEndpoint, "finalized");
   const al = new AccountLoader();
   const from = al.getMetaplexKeypairSignerFromEnv(umi, "ADMIN");
-  const to = al.getMetaplexKeypairSignerFromEnv(umi, "USER_1");
-  const tokenMint = new PublicKey();
+  const to = new PublicKey("GP7Mx1vTFT19jGLLRwARCwtV3HHDyANJEFhym4ByYvCY");
+  const tokenMint = new PublicKey("Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B");
   const decimals = 9;
-  const amount = 10;
-  const amountDecimalFormat = ethers.parseUnits(amount.toString(), decimals);
+  const amount = "0.0001";
+  const amountDecimalFormat = ethers.utils.parseUnits(amount.toString(), decimals);
+
   transferToken({
-    tokenMint: al.getMetaplexKeypairSignerFromEnv(umi, "TOKEN_MINT").publicKey,
+    tokenMint: tokenMint,
     from,
     to,
-    amount: amountDecimalFormat,
+    amount: amountDecimalFormat.toBigInt(),
   });
 }
 

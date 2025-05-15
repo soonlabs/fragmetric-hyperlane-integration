@@ -17,11 +17,13 @@ async function pipeline({
   conn,
   assetMint,
   assetAmount,
+  extraLutLs,
 }: {
   user: PublicKey;
   conn: Connection;
   assetMint: string | null;
   assetAmount: bigint;
+  extraLutLs: string[];
 }) {
   const {
     tx: restakeTx,
@@ -60,7 +62,10 @@ async function pipeline({
   const tx = new Transaction().add(restakeTx, wrapTx, bridgeWfragSolTx);
 
   // filter unique lookup table addresses
-  const uniqueLutLs = [...new Set([...restakeLutLs, ...wrapLutLs, ...bridgeWfragSolLutLs])];
+  const uniqueLutLs = [
+    ...new Set([...restakeLutLs, ...wrapLutLs, ...bridgeWfragSolLutLs]),
+    ...extraLutLs,
+  ];
 
   // get lookup table accounts
   const lookupTableAccounts = await Promise.all(
@@ -91,10 +96,17 @@ async function pipeline({
 async function main() {
   const conn = getConnection();
   const al = new AccountLoader();
-  const user = al.getKeypairFromEnvironmentDecrypt("ADMIN");
-  const assetMint = null;
+  const user = al.getKeypairFromEnvironmentDecrypt("USER_1");
+  const assetMint = "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B"; // bbSol
   const assetAmount = BigInt(0.0001 * LAMPORTS_PER_SOL);
-  const { tx } = await pipeline({ user: user.publicKey, conn, assetMint, assetAmount });
+  const extraLutLs = ["Gekt27gphxDuzkUNxjdB2x2WjcPqRuHV7x413a7LtA9G"];
+  const { tx } = await pipeline({
+    user: user.publicKey,
+    conn,
+    assetMint,
+    assetAmount,
+    extraLutLs,
+  });
 
   tx.sign([user]);
 

@@ -73,18 +73,30 @@ export async function restake({
       innerInstructions: true,
     });
 
-    if (simulation.value.innerInstructions?.length != 1) {
-      throw new Error("innerInstructions length is not 1");
-    }
-    if (simulation.value.innerInstructions[0].index != 4) {
-      throw new Error("innerInstructions index is not 4");
+    if (!simulation.value.innerInstructions) {
+      throw new Error("innerInstructions is null");
     }
 
-    const mintIns = simulation.value.innerInstructions[0].instructions[0];
+    // iterate inner instructions to get mintTo
+    let mintToIns: any[] = [];
+    for (const innerInstruction of simulation.value.innerInstructions) {
+      for (const instruction of innerInstruction.instructions) {
+        if (
+          instruction.programId.equals(TOKEN_2022_PROGRAM_ID) &&
+          (instruction as any).parsed.type === "mintTo"
+        ) {
+          mintToIns.push(instruction);
+        }
+      }
+    }
+
+    if (mintToIns.length != 1) {
+      throw new Error("mintToIns length is not 1");
+    }
+
+    const mintIns = mintToIns[0];
 
     if (
-      !mintIns.programId.equals(TOKEN_2022_PROGRAM_ID) ||
-      (mintIns as any).parsed.type !== "mintTo" ||
       !new PublicKey((mintIns as any).parsed.info.mint).equals(fragSolMint) ||
       !new PublicKey((mintIns as any).parsed.info.account).equals(
         getAssociatedTokenAddressSync(fragSolMint, user, false, TOKEN_2022_PROGRAM_ID)
@@ -96,26 +108,33 @@ export async function restake({
     mintedTokenAmount = BigInt((mintIns as any).parsed.info.amount);
   }
 
-  // await sendTxn(conn.sendTransaction(transactionV0, { skipPreflight: false }), "restake");
-  return { tx, lutLs: lookupTableAddress, signers: [], mintedTokenAmount };
+  // await sendTxn(conn.sendTransaction(transactionV0), "restake");
+
+  return { tx, lutLs: lookupTableAddress, signers: [], mintedTokenAmount, transactionV0 };
 }
 
 async function main() {
   const conn = getConnection();
   const al = new AccountLoader();
 
-  const user = al.getKeypairFromEnvironmentDecrypt("ADMIN");
-  const assetMint = null; // null means SOL
+  const user = al.getKeypairFromEnvironmentDecrypt("USER_1");
+  // const assetMint = null; // null means SOL
+  const assetMint = "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B";
   const assetAmount = BigInt(0.0001 * LAMPORTS_PER_SOL);
 
-  const { tx, mintedTokenAmount } = await restake({
+  const { tx, mintedTokenAmount, transactionV0, lutLs } = await restake({
     user: user.publicKey,
     conn,
     assetMint,
     assetAmount,
   });
 
-  console.log({ mintedTokenAmount });
+  console.log({ mintedTokenAmount, lutLs });
+
+  // {
+  //   transactionV0.sign([user]);
+  //   await sendTxn(conn.sendTransaction(transactionV0), "restake");
+  // }
 
   // await sendTxn(conn.sendTransaction(tx, [user]), "restake");
 }
